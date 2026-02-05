@@ -8,23 +8,26 @@ export const subjectsRouter = express.Router();
 subjectsRouter.get("/", async (req, res) => {
   try {
     const { search, department, page = 1, limit = 10 } = req.query;
-    const currentPage = Math.max(1, +page);
-    const limitPerPage = Math.max(1, +limit);
+    const currentPage = Math.max(1, parseInt(String(page), 10) || 1);
+    const limitPerPage = Math.max(1, parseInt(String(limit), 10) || 10);
 
     const offset = (currentPage - 1) * limitPerPage;
     const filterConditions = [];
+    const escapeLike = (str: string) => str.replace(/[%_]/g, "\\$&");
 
     if (search) {
+      const escapedSearch = escapeLike(String(search));
       filterConditions.push(
         or(
-          ilike(subjects.name, `%${search}%`),
-          ilike(subjects.code, `%${search}%`),
+          ilike(subjects.name, `%${escapedSearch}%`),
+          ilike(subjects.code, `%${escapedSearch}%`),
         ),
       );
     }
 
     if (department) {
-      filterConditions.push(ilike(departments.name, `%${department}%`));
+      const escapedDept = escapeLike(String(department));
+      filterConditions.push(ilike(departments.name, `%${escapedDept}%`));
     }
 
     const whereClause =
@@ -36,7 +39,7 @@ subjectsRouter.get("/", async (req, res) => {
       .leftJoin(departments, eq(subjects.departmentId, departments.id))
       .where(whereClause);
 
-    const totalCount = countResult[0]?.count ?? 0;
+    const totalCount = Number(countResult[0]?.count) || 0;
 
     const subjectsList = await db
       .select({
@@ -61,5 +64,6 @@ subjectsRouter.get("/", async (req, res) => {
     });
   } catch (e) {
     console.error(`GET /subjects error: ${e}`);
+    res.status(500).json({ error: "Internal server error" });
   }
 });

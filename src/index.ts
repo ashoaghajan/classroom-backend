@@ -1,9 +1,14 @@
 import cors from "cors";
+import "dotenv/config";
 import express from "express";
 import { subjectsRouter } from "./routes/subjects";
 
 const app = express();
 const PORT = 8000;
+
+if (!process.env.FRONTEND_URL) {
+  throw new Error("FRONTEND_URL is not defined");
+}
 
 app.use(
   cors({
